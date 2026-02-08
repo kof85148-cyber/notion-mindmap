@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KeepMind Mobile - 直式優化版</title>
+    <title>KeepMind Mobile - 修正版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
     <style>
         :root { 
@@ -15,49 +15,41 @@
         
         /* --- 首頁直式佈局 --- */
         #home-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 3000; display: flex; flex-direction: column; }
-        
         .home-header { padding: 20px 20px 10px; flex-shrink: 0; }
-        .tag-scroller { 
-            display: flex; gap: 10px; overflow-x: auto; padding: 10px 20px; 
-            scrollbar-width: none; white-space: nowrap; border-bottom: 1px solid #333;
-        }
+        .tag-scroller { display: flex; gap: 10px; overflow-x: auto; padding: 10px 20px; scrollbar-width: none; white-space: nowrap; border-bottom: 1px solid #333; }
         .tag-scroller::-webkit-scrollbar { display: none; }
-        .tag-pill { 
-            padding: 6px 16px; background: #252833; border-radius: 20px; font-size: 13px; 
-            color: #aaa; border: 1px solid #444; flex-shrink: 0; 
-        }
+        .tag-pill { padding: 6px 16px; background: #252833; border-radius: 20px; font-size: 13px; color: #aaa; border: 1px solid #444; flex-shrink: 0; }
         .tag-pill.active { background: var(--primary); color: #000; border-color: var(--primary); font-weight: bold; }
 
         .main-view { flex-grow: 1; padding: 15px; overflow-y: auto; }
         .card-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        
+        /* 修正後的卡片樣式 */
         .note-card { 
             background: var(--card-bg); padding: 18px; border-radius: 12px; 
-            border: 1px solid #333; position: relative; display: flex; align-items: center; justify-content: space-between;
+            border: 1px solid #333; position: relative; display: flex; align-items: center; 
+            justify-content: space-between; overflow: hidden;
         }
-        .card-info { flex-grow: 1; }
-        .card-del-btn { color: var(--danger); padding: 10px; font-size: 20px; }
+        .card-info { flex-grow: 1; pointer-events: none; } /* 讓文字不干擾點擊 */
+        .card-del-btn { 
+            color: var(--danger); padding: 15px; font-size: 20px; 
+            position: relative; z-index: 10; font-weight: bold;
+        }
 
         /* --- 編輯器直式工具列 --- */
         #editor-view { flex-grow: 1; display: none; flex-direction: column; }
-        .toolbar { 
-            background: #15171f; border-bottom: 1px solid #333; padding: 10px;
-            display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
-        }
+        .toolbar { background: #15171f; border-bottom: 1px solid #333; padding: 10px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
         .toolbar input { grid-column: span 2; background: #000; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 6px; }
-        
         #cy { flex-grow: 1; background: radial-gradient(circle, #1a1c26 1px, #0f111a 1px); background-size: 25px 25px; }
 
-        /* 按鈕樣式 */
         button { padding: 10px 5px; border-radius: 8px; border: 1px solid #444; background: #252833; color: #eee; font-size: 12px; font-weight: bold; }
         .btn-main { background: var(--primary); color: #000; border: none; }
         .btn-select-mode.active { background: var(--blue); color: #000; border-color: var(--blue); }
 
-        /* 備份彈窗優化 */
         #backup-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 5000; display: none; padding: 20px; align-items: center; justify-content: center; }
         .modal-content { background: var(--card-bg); padding: 20px; border-radius: 15px; width: 100%; border: 1px solid #444; }
         textarea { width: 100%; height: 180px; background: #000; color: var(--success); border: 1px solid #444; border-radius: 8px; margin: 10px 0; padding: 10px; font-size: 12px; }
-
-        #inline-editor { position: absolute; display: none; z-index: 2000; border: 2px solid var(--primary); border-radius: 8px; padding: 10px; background: #222; color: white; font-size: 16px; width: 150px; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
+        #inline-editor { position: absolute; display: none; z-index: 2000; border: 2px solid var(--primary); border-radius: 8px; padding: 10px; background: #222; color: white; font-size: 16px; width: 150px; }
     </style>
 </head>
 <body>
@@ -65,7 +57,7 @@
     <div id="backup-modal">
         <div class="modal-content">
             <h3 style="margin:0">備份/還原文字版</h3>
-            <textarea id="backup-data" spellcheck="false" placeholder="在此處貼上代碼..."></textarea>
+            <textarea id="backup-data" spellcheck="false"></textarea>
             <button onclick="copyBackupText()" style="width:100%; background: var(--success); color:#000; margin-bottom:10px;">📋 一鍵複製</button>
             <div style="display:flex; gap: 10px;">
                 <button onclick="document.getElementById('backup-modal').style.display='none'" style="flex:1">取消</button>
@@ -79,16 +71,11 @@
             <h2 style="margin:0; color:var(--primary)">KeepMind</h2>
             <p style="font-size:12px; color:#666; margin:5px 0 0;">心智圖筆記 · 手機優化版</p>
         </div>
-        
-        <div class="tag-scroller" id="tagScroller">
-            <div class="tag-pill active" onclick="switchTag('all')">所有筆記</div>
-        </div>
-
+        <div class="tag-scroller" id="tagScroller"></div>
         <div class="main-view">
             <div class="card-grid" id="cardGrid"></div>
             <button class="btn-main" onclick="createNewNote()" style="width:100%; margin-top:20px; padding:15px; border-radius:30px; font-size:15px;">＋ 新增心智圖筆記</button>
         </div>
-        
         <div style="padding: 15px; border-top:1px solid #222;">
             <input type="text" id="new-tag-input" placeholder="+ 新增標籤分類..." onkeypress="if(event.key==='Enter') addTag()" style="width:100%; background:#15171f; border:1px solid #333; color:white; padding:12px; border-radius:8px; outline:none;">
         </div>
@@ -99,7 +86,6 @@
             <button onclick="saveAndExit()" class="btn-main">儲存返回</button>
             <input type="text" id="edit-title" placeholder="命名筆記...">
             <button onclick="openBackupModal()" class="btn-backup">備份</button>
-            
             <button id="multi-select-btn" onclick="toggleMultiSelect()">選取模式</button>
             <button onclick="addNode()">＋新節點</button>
             <button onclick="removeSelected()" style="color:var(--danger)">移除點</button>
@@ -129,14 +115,10 @@
                         'background-color': '#1a1c26', 'border-width': 2, 'border-color': '#fb0', 'shape': 'ellipse',
                         'width': 22, 'height': 22, 'text-outline-width': 2, 'text-outline-color': '#0f111a'
                     }},
-                    { selector: 'edge', style: {
-                        'width': 1.5, 'line-color': '#555', 'curve-style': 'taxi', 'target-arrow-shape': 'circle', 'target-arrow-color': '#555'
-                    }},
+                    { selector: 'edge', style: { 'width': 1.5, 'line-color': '#555', 'curve-style': 'taxi', 'target-arrow-shape': 'circle', 'target-arrow-color': '#555' }},
                     { selector: ':selected', style: { 'border-color': '#fff', 'border-width': 3, 'background-color': '#444' }}
                 ]
             });
-
-            // 手機群組移動邏輯
             let isDragging = false;
             cy.on('drag', 'node:selected', function(e) {
                 if (isDragging) return; isDragging = true;
@@ -148,36 +130,20 @@
             });
             cy.on('grab', 'node', updatePositions);
             function updatePositions() { cy.nodes().forEach(n => { n.data('prevX', n.position().x); n.data('prevY', n.position().y); }); }
-
-            // 點擊邏輯
-            cy.on('tap', function(e) {
-                if (e.target === cy) {
-                    document.getElementById('inline-editor').style.display = 'none';
-                    if (!isMultiSelect) cy.elements().unselect();
-                }
+            cy.on('tap', function(e) { 
+                if (e.target === cy) { 
+                    document.getElementById('inline-editor').style.display = 'none'; 
+                    if (!isMultiSelect) cy.elements().unselect(); 
+                } 
             });
-
-            cy.on('tap', 'node', function(e) {
-                if (!isMultiSelect) {
-                    cy.elements().unselect();
-                    e.target.select();
-                }
-            });
-
-            // 雙擊編輯 (手機版連按兩次)
+            cy.on('tap', 'node', function(e) { if (!isMultiSelect) { cy.elements().unselect(); e.target.select(); } });
             cy.on('dbltap', 'node', function(e) {
-                const target = e.target;
-                const pos = e.renderedPosition;
+                const target = e.target; const pos = e.renderedPosition;
                 const input = document.getElementById('inline-editor');
-                input.value = target.data('label') || '';
-                input.style.display = 'block';
+                input.value = target.data('label') || ''; input.style.display = 'block';
                 input.style.left = Math.min(window.innerWidth - 160, Math.max(10, pos.x - 75)) + 'px';
-                input.style.top = (pos.y - 20) + 'px';
-                input.focus();
-                input.onblur = input.onkeydown = function(evt) {
-                    if (evt.type === 'keydown' && evt.key !== 'Enter') return;
-                    target.data('label', input.value); input.style.display = 'none';
-                };
+                input.style.top = (pos.y - 20) + 'px'; input.focus();
+                input.onblur = input.onkeydown = function(evt) { if (evt.type === 'keydown' && evt.key !== 'Enter') return; target.data('label', input.value); input.style.display = 'none'; };
             });
         }
 
@@ -188,7 +154,6 @@
             btn.innerText = isMultiSelect ? "多選中..." : "選取模式";
         }
 
-        // --- 備份系統 ---
         function openBackupModal() {
             const data = { title: document.getElementById('edit-title').value, elements: cy.elements().map(ele => ({ group: ele.isNode() ? 'nodes' : 'edges', data: ele.data(), position: ele.isNode() ? ele.position() : undefined })) };
             document.getElementById('backup-data').value = JSON.stringify(data);
@@ -196,23 +161,17 @@
         }
 
         async function copyBackupText() {
-            const txt = document.getElementById('backup-data').value;
-            try {
-                await navigator.clipboard.writeText(txt);
-                alert("已複製代碼！可存至 Notion。");
-            } catch (err) { alert("複製失敗，請手動選取全選。"); }
+            try { await navigator.clipboard.writeText(document.getElementById('backup-data').value); alert("已複製！"); } catch (err) { alert("複製失敗，請手動全選。"); }
         }
 
         function importFromText() {
             try {
                 const parsed = JSON.parse(document.getElementById('backup-data').value);
                 document.getElementById('edit-title').value = parsed.title || "匯入筆記";
-                initCy(parsed.elements);
-                document.getElementById('backup-modal').style.display = 'none';
-            } catch (e) { alert("代碼格式不正確！"); }
+                initCy(parsed.elements); document.getElementById('backup-modal').style.display = 'none';
+            } catch (e) { alert("格式錯誤！"); }
         }
 
-        // --- 管理邏輯 ---
         function saveAndExit() {
             const elementsData = cy.elements().map(ele => ({ group: ele.isNode() ? 'nodes' : 'edges', data: ele.data(), position: ele.isNode() ? ele.position() : undefined }));
             const noteObj = { id: currentNoteId, title: document.getElementById('edit-title').value || "未命名筆記", tag: currentTagFilter === 'all' ? '未分類' : currentTagFilter, data: elementsData };
@@ -233,27 +192,20 @@
         }
 
         function createNewNote() {
-            currentNoteId = Date.now().toString();
-            document.getElementById('edit-title').value = '';
-            document.getElementById('home-overlay').style.display = 'none';
-            document.getElementById('editor-view').style.display = 'flex';
+            currentNoteId = Date.now().toString(); document.getElementById('edit-title').value = '';
+            document.getElementById('home-overlay').style.display = 'none'; document.getElementById('editor-view').style.display = 'flex';
             initCy([{ data: { id: 'root', label: '中心主題' }, position: {x:200, y:300} }]);
         }
 
         function renderSidebar() {
             const scroller = document.getElementById('tagScroller');
             scroller.innerHTML = `<div class="tag-pill ${currentTagFilter === 'all' ? 'active' : ''}" onclick="switchTag('all')">所有筆記</div>`;
-            tags.forEach(t => {
-                scroller.innerHTML += `<div class="tag-pill ${currentTagFilter === t ? 'active' : ''}" onclick="switchTag('${t}')">${t}</div>`;
-            });
+            tags.forEach(t => { scroller.innerHTML += `<div class="tag-pill ${currentTagFilter === t ? 'active' : ''}" onclick="switchTag('${t}')">${t}</div>`; });
         }
 
         function addTag() {
             const input = document.getElementById('new-tag-input');
-            if(input.value && !tags.includes(input.value)) {
-                tags.push(input.value); localStorage.setItem('km_tags_mobile_v2', JSON.stringify(tags));
-                input.value = ''; renderSidebar();
-            }
+            if(input.value && !tags.includes(input.value)) { tags.push(input.value); localStorage.setItem('km_tags_mobile_v2', JSON.stringify(tags)); input.value = ''; renderSidebar(); }
         }
 
         function switchTag(t) { currentTagFilter = t; renderSidebar(); renderCards(); }
@@ -261,16 +213,36 @@
         function renderCards() {
             const grid = document.getElementById('cardGrid'); grid.innerHTML = '';
             notes.filter(n => currentTagFilter === 'all' || n.tag === currentTagFilter).forEach(n => {
-                const card = document.createElement('div'); card.className = 'note-card'; card.onclick = () => openNote(n.id);
-                card.innerHTML = `<div class="card-info"><h3 style="margin:0; font-size:15px;">${n.title}</h3><span style="font-size:11px; color:var(--blue);"># ${n.tag}</span></div><span class="card-del-btn" onclick="event.stopPropagation();deleteNote('${n.id}')">✕</span>`;
+                const card = document.createElement('div');
+                card.className = 'note-card';
+                // 點擊卡片開啟筆記
+                card.onclick = function(e) { openNote(n.id); };
+                
+                card.innerHTML = `
+                    <div class="card-info">
+                        <h3 style="margin:0; font-size:15px;">${n.title}</h3>
+                        <span style="font-size:11px; color:var(--blue);"># ${n.tag}</span>
+                    </div>
+                    <div class="card-del-btn">✕</div>
+                `;
+                
+                // 專門處理刪除按鈕的點擊
+                const delBtn = card.querySelector('.card-del-btn');
+                delBtn.onclick = function(e) {
+                    e.stopPropagation(); // 關鍵：阻止開啟筆記
+                    if(confirm("確定刪除此筆記？")) {
+                        notes = notes.filter(item => item.id !== n.id);
+                        localStorage.setItem('km_mobile_v2', JSON.stringify(notes));
+                        renderCards();
+                    }
+                };
+                
                 grid.appendChild(card);
             });
         }
-        function deleteNote(id) { if(confirm("確定刪除？")) { notes = notes.filter(n => n.id !== id); localStorage.setItem('km_mobile_v2', JSON.stringify(notes)); renderCards(); } }
 
         function addNode() {
-            const sel = cy.$(':selected')[0] || cy.nodes()[0];
-            const id = 'n' + Date.now();
+            const sel = cy.$(':selected')[0] || cy.nodes()[0]; const id = 'n' + Date.now();
             cy.add([{ group: 'nodes', data: { id, label: '新節點' }, position: { x: sel.position().x + 80, y: sel.position().y + 80 } }, { group: 'edges', data: { source: sel.id(), target: id } }]);
         }
         function removeSelected() { cy.$(':selected').remove(); }
